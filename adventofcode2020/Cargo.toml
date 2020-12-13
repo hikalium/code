@@ -13,3 +13,7 @@ lazy_static = "1.4.0"
 [[bin]]
 name = "day4_2"
 path = "day4_2.rs"
+
+[[bin]]
+name = "day5_1"
+path = "day5_1.rs"
