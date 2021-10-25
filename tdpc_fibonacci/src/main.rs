@@ -1,280 +1,4 @@
-#![feature(map_first_last)]
-use std::collections::HashMap;
-use std::io::{self, Read};
-
 const MOD: u64 = 1_000_000_007;
-
-/*
-
-fn companion(n: usize) -> Vec<Vec<u64>> {
-    let mut vec: Vec<Vec<u64>> = Vec::with_capacity(n);
-    let mut row = Vec::new();
-    row.resize(n, 1);
-    vec.push(row);
-    for i in 1..n {
-        let mut row = Vec::new();
-        row.resize(n, 0);
-        row[i - 1] = 1;
-        vec.push(row);
-    }
-    vec
-}
-
-fn unit(n: usize) -> Vec<Vec<u64>> {
-    let mut vec: Vec<Vec<u64>> = Vec::with_capacity(n);
-    let mut row: Vec<u64> = Vec::new();
-    for i in 0..n {
-        let mut row = Vec::new();
-        row.resize(n, 0);
-        row[i] = 1;
-        vec.push(row);
-    }
-    vec
-}
-
-fn companion_pow(n: usize, k: usize) -> Vec<Vec<u64>> {
-    let mut cm_result = unit(n);
-    let mut cm = companion(n);
-
-    let mut t = 0;
-    println!("companion_pow n={} k={}", n, k);
-    for i in 0..32 {
-        if (k ^ t) == 0 {
-            break;
-        }
-        println!("companion_pow {} {}", i, t);
-        if (k & (1 << i)) != 0 {
-            cm_result = mul_matrix_matrix(&cm_result, &cm);
-            t |= (1 << i);
-        }
-        cm = mul_matrix_matrix(&cm, &cm);
-    }
-    cm_result
-}
-
-fn print_matrix(matrix: &Vec<Vec<u64>>) {
-    for row in matrix {
-        for v in row {
-            print!("{} ", v);
-        }
-        println!("");
-    }
-    println!("");
-}
-
-fn print_vec(vec: &Vec<u64>) {
-    for v in vec {
-        print!("{} ", v);
-    }
-    println!("");
-    println!("");
-}
-
-fn mul_matrix_vec(m: &Vec<Vec<u64>>, v: Vec<u64>) -> Vec<u64> {
-    let mut result: Vec<u64> = Vec::with_capacity(v.len());
-    result.resize(v.len(), 0);
-    for i in 0..v.len() {
-        let mut sum = 0;
-        for k in 0..v.len() {
-            sum += v[k] * m[i][k];
-        }
-        result[i] = sum % MOD;
-    }
-    result
-}
-
-fn mul_matrix_matrix(m1: &Vec<Vec<u64>>, m2: &Vec<Vec<u64>>) -> Vec<Vec<u64>> {
-    // returns m1 * m2
-    let mut vec: Vec<Vec<u64>> = Vec::with_capacity(m1.len());
-    for y in 0..m1.len() {
-        let mut row = Vec::new();
-        row.resize(m1.len(), 0);
-        vec.push(row);
-    }
-    for y in 0..m1.len() {
-        for x in 0..m1.len() {
-            for k in 0..m1.len() {
-                vec[y][x] = (vec[y][x] + m1[y][k] * m2[k][x]) % MOD;
-            }
-        }
-    }
-    vec
-}
-
-fn solution_naive(n: usize, k: usize) -> u64 {
-    let mut kv: [u64; 1000 + 1] = [0; 1000 + 1];
-    let mut next_value: u64 = 0;
-    for i in 0..k {
-        kv[i] = 1;
-        next_value += 1;
-    }
-    for i in k..n {
-        let ir = i % k;
-        let next_next_value = (next_value + next_value) % 1_000_000_007;
-        let next_next_value = if next_next_value > kv[ir] {
-            next_next_value - kv[ir]
-        } else {
-            next_next_value + 1_000_000_007 - kv[ir]
-        };
-        kv[ir] = next_value;
-        next_value = next_next_value;
-    }
-    return kv[(n - 1) % k];
-}
-
-fn solution_companion_mat(n: usize, k: usize) -> u64 {
-    let cm = companion(k);
-
-    let mut v = Vec::new();
-    v.resize(k, 1);
-
-    for _ in v.len()..n {
-        v = mul_matrix_vec(&cm, v);
-    }
-    v[0]
-}
-
-fn solution_companion_mat2(n: usize, k: usize) -> u64 {
-    if (n < k) {
-        return 1;
-    }
-    let cm = companion_pow(k, n - k);
-
-    let mut v = Vec::new();
-    v.resize(k, 1);
-
-    v = mul_matrix_vec(&cm, v);
-    v[0]
-}
-
-use std::collections::HashMap;
-
-fn calc_coefficients(n: usize, k: usize, c_cache: &mut HashMap<usize, Vec<usize>>) -> Vec<usize> {
-    if n < k {
-        let mut c = vec![0; k];
-        c[n] = 1;
-        return c;
-    }
-    if n == k {
-        return vec![1; k];
-    }
-    if c_cache.contains_key(&n) {
-        return c_cache[&n].clone();
-    }
-    if n % 2 == 0 {
-        let mid = n / 2;
-        let mut mid_values = vec![vec![0; k]; k];
-        for i in 0..k {
-            mid_values[i] = calc_coefficients(mid + i, k, c_cache);
-        }
-        let adv = mid_values[0].clone(); // f(mid)
-        let mut c = vec![0; k];
-        for i in 0..k {
-            for t in 0..k {
-                c[i] = (c[i] + adv[i] * mid_values[t][i]) % (MOD as usize)
-            }
-        }
-        c_cache.insert(n, c.clone());
-        println!("A: {} = {:?}", n, c);
-        c
-    } else {
-        let mut mid_values = vec![vec![0; k]; k];
-        for i in 0..k {
-            mid_values[i] = calc_coefficients(n - k + i, k, c_cache);
-        }
-        let adv = vec![1; k]; // f(1)
-        let mut c = vec![0; k];
-        for i in 0..k {
-            for t in 0..k {
-                c[i] = (c[i] + adv[i] * mid_values[t][i]) % (MOD as usize)
-            }
-        }
-        c_cache.insert(n, c.clone());
-        println!("B: {} = {:?}", n, c);
-        c
-    }
-}
-*/
-
-/*
-fn calc_coefficients_bottomup(
-    n: usize,
-    k: usize,
-    c_cache: &mut HashMap<usize, Vec<usize>>,
-) -> Vec<usize> {
-    let c = vec![1; k]; // f(1)
-    if n < k {
-        let mut c = vec![0; k];
-        c[n] = 1;
-        return c;
-    }
-    if n == k {
-        return vec![1; k];
-    }
-    if c_cache.contains_key(&n) {
-        return c_cache[&n].clone();
-    }
-    if n % 2 == 0 {
-        let mid = n / 2;
-        let mut mid_values = vec![vec![0; k]; k];
-        for i in 0..k {
-            mid_values[i] = calc_coefficients(mid + i, k, c_cache);
-        }
-        let adv = mid_values[0].clone(); // f(mid)
-        let mut c = vec![0; k];
-        for i in 0..k {
-            for t in 0..k {
-                c[i] = (c[i] + adv[i] * mid_values[t][i]) % (MOD as usize)
-            }
-        }
-        c_cache.insert(n, c.clone());
-        println!("A: {} = {:?}", n, c);
-        c
-    } else {
-        let mut mid_values = vec![vec![0; k]; k];
-        for i in 0..k {
-            mid_values[i] = calc_coefficients(n - k + i, k, c_cache);
-        }
-        let mut c = vec![0; k];
-        for i in 0..k {
-            for t in 0..k {
-                c[i] = (c[i] + adv[i] * mid_values[t][i]) % (MOD as usize)
-            }
-        }
-        c_cache.insert(n, c.clone());
-        println!("B: {} = {:?}", n, c);
-        c
-    }
-}
-*/
-
-/*
-fn solution_kitamasa(n: usize, k: usize) -> u64 {
-    let mut f_cache = HashMap::new();
-    f_cache.insert(1, vec![vec![1; k]);
-    let mut f = vec![1; k];
-    let mut v = vec![1; k];
-    let mut i = 1;
-    while (i < k) {
-        i *= 2;
-    }
-    println!("{:?}", f_cache);
-    0
-}
-
-fn main() -> io::Result<()> {
-    let mut buffer = String::new();
-    io::stdin().read_to_string(&mut buffer)?;
-    let rows: Vec<&str> = buffer.split('\n').collect();
-    let ev: Vec<&str> = rows[0].split(' ').collect();
-    let k = ev[0].parse::<usize>().unwrap();
-    let n = ev[1].parse::<usize>().unwrap();
-
-    println!("{}", solution_kitamasa(n, k));
-
-    Ok(())
-}
-*/
 
 /*
 k = 3
@@ -382,16 +106,98 @@ v[10011]                                                                        
 
 */
 
+fn inner_product(lhs: &[u64], rhs: &[u64]) -> u64 {
+    lhs.iter()
+        .zip(rhs.iter())
+        .fold(0, |s, v| (s + (v.0 * v.1) % MOD) % MOD)
+        % MOD
+}
+
+fn f_next(f: &[u64]) -> Vec<u64> {
+    // f[n+1] = [f[n][2], f[n][0] + f[n][2], f[n][1] + f[n][2]] ..... *next
+    let mut nf = Vec::new();
+    let last = *f.last().expect("f is empty");
+    nf.push(last);
+    for e in f.iter().take(f.len() - 1) {
+        nf.push((last + e) % MOD);
+    }
+    nf
+}
+
+fn f_double(f: &[Vec<u64>]) -> Vec<u64> {
+    // f[2*n] = (f[n] * f[n][0] + f[n+1] * f[n][1] + f[n+2] * f[n][2]) ..... *double
+    let k = f.len();
+    let mut nf = vec![0; k];
+    for i in 0..k {
+        for (t, nft) in nf.iter_mut().enumerate().take(k) {
+            *nft += (f[i][t] * f[0][i]) % MOD;
+            *nft %= MOD;
+        }
+    }
+    nf
+}
+
+fn solution_kitamasa(k: usize, n: usize) -> u64 {
+    if n < k {
+        return 1;
+    }
+    let target_idx = n - 1;
+    let num_of_bits = {
+        let mut i = 0;
+        loop {
+            if target_idx >> i == 0 {
+                break i;
+            }
+            i += 1;
+        }
+    };
+    // Setup f[1]
+    let mut f = vec![0; k];
+    f[1] = 1;
+
+    for i in (0..num_of_bits - 1).rev() {
+        // f[n] -> f[2*n]
+        let mut fs = vec![f];
+        for _ in 1..k {
+            fs.push(f_next(fs.last().expect("fs is empty")));
+        }
+        f = f_double(&fs);
+
+        if (target_idx >> i) & 1 == 1 {
+            // f[n] -> f[n+1]
+            f = f_next(&f);
+        }
+    }
+    inner_product(&vec![1; k], &f) % MOD
+}
+
+fn main() -> std::io::Result<()> {
+    use std::io::Read;
+    let mut buffer = String::new();
+    std::io::stdin().read_to_string(&mut buffer)?;
+    let rows: Vec<&str> = buffer.split('\n').collect();
+    let ev: Vec<&str> = rows[0].split(' ').collect();
+    let k = ev[0].parse::<usize>().unwrap();
+    let n = ev[1].parse::<usize>().unwrap();
+
+    println!("{}", solution_kitamasa(k, n));
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     #[test]
-    fn n3c21() {
-        let k = 3;
-        let n = 21;
+    fn correct_inner_product() {
+        assert_eq!(inner_product(&vec![1, 2, 3], &vec![4, 5, 6]), 4 + 10 + 18);
+    }
+
+    fn check_next_and_double(k: usize, n: usize) {
         let mut w = vec![1; k];
+        let mut v = Vec::new();
         for _ in 0..n {
-            print!("{:5}, ", w[0]);
+            v.push(w[0]);
             let mut sum = 0;
             for i in 0..k {
                 sum += w[i];
@@ -401,40 +207,64 @@ mod tests {
             }
             w[k - 1] = sum;
         }
-        println!("");
-        for i in 0..n {
-            print!("{:5}, ", i);
+
+        let mut f = Vec::new();
+        for i in 0..k {
+            let mut fe = vec![0; k];
+            fe[i] = 1;
+            f.push(fe);
         }
-        println!("");
-        assert_eq!(0, 1);
+
+        println!("testing f_next()...");
+        let mut fe = vec![1; k];
+        for i in k..n {
+            println!("f[{}] = {:?}", i, fe);
+            f.push(fe.clone());
+            let e = inner_product(&vec![1; k], &fe);
+            assert_eq!(e, v[i]);
+            fe = f_next(&fe);
+        }
+        println!("f_next is OK");
+
+        println!("testing f_double()...");
+        for i in 0..n / 2 {
+            let input_fslice = &f[i..i + k];
+            let expected = &f[i * 2];
+            println!(
+                "f[{}..{}] = {:?} -> f[{}] = {:?}",
+                i,
+                i + k,
+                &input_fslice,
+                i * 2,
+                &expected
+            );
+            let e = f_double(input_fslice);
+            assert_eq!(&e, expected);
+        }
     }
-    /*
+
     #[test]
-    fn it_works() {
-        /*
-        assert_eq!(
-            next(2, vec![vec![1, 0], vec![0, 1]]),
-            vec![vec![0, 1], vec[]]
-        )
-        let c = solution_kitamasa(1, 2);
-        assert_eq!(c, 1);
-        let c = solution_kitamasa(2, 2);
-        assert_eq!(c, 1);
-        let c = solution_kitamasa(3, 2);
-        assert_eq!(c, 2);
-        let c = solution_kitamasa(4, 2);
-        assert_eq!(c, 3);
-        let c = solution_kitamasa(5, 2);
-        assert_eq!(c, 5);
-        let c = solution_kitamasa(6, 2);
-        assert_eq!(c, 8);
-
-        let c = solution_kitamasa(10, 2);
-        assert_eq!(c, 55);
-
-        let c = solution_kitamasa(10, 3);
-        assert_eq!(c, 105);
-        */
+    fn k3n21() {
+        check_next_and_double(3, 21);
     }
-    */
+
+    #[test]
+    fn k2n21() {
+        check_next_and_double(2, 21);
+    }
+
+    #[test]
+    fn k5n21() {
+        check_next_and_double(5, 21);
+    }
+
+    #[test]
+    fn samples() {
+        assert_eq!(solution_kitamasa(3, 10), 105);
+        assert_eq!(solution_kitamasa(2, 10), 55);
+        assert_eq!(solution_kitamasa(2, 100), 687995182);
+        assert_eq!(solution_kitamasa(2, 513), 169404872);
+        assert_eq!(solution_kitamasa(2, 500), 550656477);
+        assert_eq!(solution_kitamasa(2, 1000), 517691607);
+    }
 }
